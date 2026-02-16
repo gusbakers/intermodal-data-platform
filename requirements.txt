@@ -1,0 +1,25 @@
+# === CORE DATA ENGINEERING ===
+pandas==2.1.4              # Manipulación de datos
+numpy==1.26.2              # Operaciones numéricas
+pyarrow==14.0.1            # Parquet format (CRÍTICO)
+
+# === DATA QUALITY ===
+great-expectations==0.18.8 # Validación automática
+pandera==0.17.2            # Schema validation
+
+# === VISUALIZATION ===
+plotly==5.18.0             # Gráficos interactivos
+seaborn==0.13.0            # Gráficos estadísticos
+
+# === TESTING ===
+pytest==7.4.3              # Framework de testing
+pytest-cov>=4.1.0          # Coverage reports (relaxed pin)
+
+# === UTILITIES ===
+python-dotenv==1.0.0       # Variables de entorno
+PyYAML==6.0.1              # Leer configs
+loguru==0.7.2              # Logging profesional
+
+# === NOTEBOOKS ===
+jupyter==1.0.0             
+ipykernel==6.27.1
