@@ -1,0 +1,57 @@
+# ===================================
+# INTERMODAL PLATFORM CONFIGURATION
+# ===================================
+
+project:
+  name: "Intermodal Transportation Analytics"
+  version: "1.0.0"
+  description: "ETL pipeline for multimodal transport data"
+
+# === DATA PATHS ===
+data:
+  raw_file: "data/raw/transport_data.csv"
+  processed_dir: "data/processed"
+  output_format: "parquet"
+
+# === ETL SETTINGS ===
+etl:
+  chunk_size: 10000
+  validation_enabled: true
+  remove_duplicates: true
+  handle_nulls: "drop"
+
+# === LOGGING ===
+logging:
+  level: "INFO"
+  file: "logs/pipeline.log"
+  format: "%(asctime)s | %(levelname)s | %(message)s"
+
+# === DATA VALIDATION RULES ===
+validation:
+  required_columns:
+    - shipment_id
+    - origin
+    - destination
+    - transport_mode
+  
+  date_columns:
+    - shipment_date
+    - arrival_date
+  
+  numeric_columns:
+    - cost
+    - weight
+
+# === DATABASE CONFIGURATION ===
+database:
+  host: "localhost"
+  port: 5432
+  database: "intermodal_analytics"
+  user: "data_engineer"
+  password: "DataEng2024!"
+
+# === DB LOAD ===
+db_load:
+  batch_size: 1000
+  use_bulk_insert: true
+  refresh_views: true
