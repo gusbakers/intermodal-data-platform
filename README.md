@@ -214,5 +214,4 @@ Airflow for scheduling — right now you have to run it manually which is fine f
 
 If you have feedback on the approach or just want to talk about data engineering, feel free to reach out.
 
-📧 your.email@example.com  
-💼 linkedin.com/in/yourprofile
+📧 gaft-2727@outlook.com
