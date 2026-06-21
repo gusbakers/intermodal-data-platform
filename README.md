@@ -212,6 +212,9 @@ Airflow for scheduling — right now you have to run it manually which is fine f
 
 ## Connect
 
+Master's in Data Science 
+Data Engineer · ML Engineer · AI Engineer
+
 If you have feedback on the approach or just want to talk about data engineering, feel free to reach out.
 
 📧 gaft-2727@outlook.com
