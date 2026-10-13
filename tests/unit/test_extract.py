@@ -1,11 +1,22 @@
-"""Tests for extraction"""
 import pytest
-import pandas as pd
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.parent))
+
 from src.etl.extract import DataExtractor
 
-def test_extractor_initialization():
-    extractor = DataExtractor()
-    assert extractor.raw_file is not None
+
+def test_extract_included_columns(config, shipments):
+    actual = DataExtractor(config).extract()
+    assert len(actual) == len(shipments)
+    assert list(actual.columns) == list(shipments.columns)
+
+
+def test_missing_file_is_reported(config):
+    config.path("data.raw_file").unlink()
+    with pytest.raises(FileNotFoundError, match="Data file not found"):
+        DataExtractor(config).extract()
+
+
+def test_extraction_does_not_depend_on_working_directory(config, tmp_path, monkeypatch):
+    directory = tmp_path / "elsewhere"
+    directory.mkdir()
+    monkeypatch.chdir(directory)
+    assert len(DataExtractor(config).extract()) == 6

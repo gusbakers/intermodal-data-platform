@@ -1,0 +1,103 @@
+{
+  "schema_valid": true,
+  "input_records": 20000,
+  "accepted_records": 20000,
+  "rejected_records": 0,
+  "rejection_pct": 0.0,
+  "rules_evaluated": 23,
+  "rules": {
+    "missing_or_empty_text": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "invalid_or_nonfinite_numeric": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "noninteger_planned_duration_hours": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "noninteger_actual_duration_hours": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "noninteger_risk_flag": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "noninteger_total_legs": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "nonpositive_weight_tons": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "nonpositive_total_distance_km": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "nonpositive_planned_duration_hours": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "nonpositive_actual_duration_hours": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "nonpositive_total_legs": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "negative_declared_value_usd": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "negative_total_fuel_cost_usd": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "negative_avg_leg_delay_minutes": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "negative_weather_severity_avg": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "invalid_maintenance_score": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "invalid_risk_flag": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "invalid_transport_mode": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "invalid_status": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "invalid_priority": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "status_duration_mismatch": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "exact_duplicate": {
+      "failed_records": 0,
+      "checked_records": 20000
+    },
+    "conflicting_shipment_id": {
+      "failed_records": 0,
+      "checked_records": 20000
+    }
+  },
+  "note": "A record can fail several rules. Rejected-record counts count each record once."
+}

@@ -1,1 +1,21 @@
-[contenido del .gitignore]
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.swp
+*.swo
+*.egg-info/
+build/
+dist/
+logs/
+.ipynb_checkpoints/
+data/processed/*.parquet
+data/rejected/*.csv
+outputs/run_summary.json

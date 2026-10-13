@@ -1,0 +1,13 @@
+{
+  "total_shipments": 20000,
+  "on_time_shipments": 10000,
+  "delayed_shipments": 10000,
+  "on_time_pct": 50.0,
+  "avg_planned_duration_hours": 72.04465,
+  "avg_actual_duration_hours": 79.5634,
+  "avg_delay_hours_delayed": 17.0107,
+  "total_fuel_cost_usd": 130377696.55000001,
+  "avg_fuel_cost_usd": 6518.884827500001,
+  "fuel_cost_per_km": 1.705066285034407,
+  "fuel_cost_per_ton_km": 0.07620335808150014
+}

@@ -1,220 +1,154 @@
-# Intermodal Transportation Analytics Platform
+# Intermodal Logistics Analytics
 
-![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-336791?logo=postgresql&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
+Shipment analytics for understanding delivery reliability, transport duration and fuel efficiency across routes and transport modes. The platform turns the included CSV into validated shipment records, reproducible KPI tables and a PostgreSQL analytical model, with four charts that make the results accessible to an operations audience.
 
------
+![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-247bd1?logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)
+[![Checks](https://github.com/gusbakers/intermodal-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/gusbakers/intermodal-data-platform/actions/workflows/ci.yml)
+![License](https://img.shields.io/badge/License-MIT-0d9488)
 
-I got tired of building toy projects with Titanic data or Iris flowers.
+## Snapshot results
 
-So I picked something I actually find interesting — logistics. The kind of operations problem where a wrong decision costs a company thousands of dollars: which route do you use, which carrier do you trust, why is this shipment two weeks late. Real questions with real stakes.
+These values are computed from the repository's **20,000 shipment records**. They describe the included dataset, not a measured improvement in a company's operations.
 
-This is a full ETL pipeline I built from scratch. It processes raw shipment data across 4 transport modes (maritime, air, rail, road), loads it into a PostgreSQL database with a proper star schema, and generates the kind of KPIs an operations team would actually use — on-time delivery rates, cost efficiency by carrier, route profitability.
+| Metric | Observed result |
+|---|---:|
+| Accepted shipments | 20,000 |
+| Rejected shipment records | 0 |
+| Observed dominant modes | Rail, Ship, Truck |
+| On-time delivery | 50.00% |
+| Average planned duration | 72.04 hours |
+| Average actual duration | 79.56 hours |
+| Average delay among delayed shipments | 17.01 hours |
+| Average fuel expense per shipment | $6,518.88 |
+| Weighted fuel expense per kilometre | $1.705 |
 
------
+The exact values are saved in [metrics.json](outputs/metrics.json); six downloadable tables are in [outputs/tables](outputs/tables). Definitions and denominators are documented in [DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md).
 
-## Why I built this specific thing
+## Operational view
 
-I was looking at a lot of data engineering job descriptions and they all mentioned the same stuff: ETL pipelines, SQL, data modeling, maybe some Python. But most portfolio projects I found online were just Jupyter notebooks with pandas. Nothing that looked like actual production code.
+**Delivery reliability.** Compare each mode's on-time rate and shipment count.
 
-I wanted something with real structure — separate modules, proper error handling, logging that actually helps when things break, tests that run. Not just a script that works on my machine.
+![On-time delivery by transport mode](outputs/figures/01_on_time_by_mode.png)
 
-The logistics domain made sense because the data is naturally interesting. You have routes, carriers, cargo types, time series, cost vs speed tradeoffs. You can ask real business questions and get meaningful answers.
+**Duration overruns.** The chart groups all shipments into ten-hour bins. Areas above the reference line represent durations longer than planned; bins with fewer than 20 shipments are hidden. KPI calculations use all accepted records.
 
------
+![Planned versus actual duration](outputs/figures/02_planned_vs_actual.png)
 
-## What it does
+**Fuel efficiency.** The measure is total fuel expense divided by total distance. It covers fuel expense, not total operating cost.
 
-Takes messy CSV data with shipment records → cleans and validates it → loads it into PostgreSQL → refreshes 6 pre-built analytical views so you can immediately query KPIs like this:
+![Weighted fuel cost per kilometre](outputs/figures/03_fuel_cost_per_km.png)
 
-```sql
-SELECT * FROM mv_carrier_scorecard ORDER BY performance_score DESC;
-```
+**Route review.** The busiest routes are shown with their delayed share; each displayed route has at least 100 shipments.
 
-```
- carrier_name | total_shipments | on_time_% | performance_score | rank
---------------+-----------------+-----------+-------------------+------
- Carrier_3    |           5,234 |      97.2 |              92.5 |    1
- Carrier_7    |           4,892 |      95.8 |              89.3 |    2
- Carrier_1    |           5,123 |      93.1 |              85.7 |    3
-```
+![Route shipment volume and delayed share](outputs/figures/04_route_volume_and_delays.png)
 
-The pipeline processes ~50K records in under a minute. Here’s what a real run looks like:
+These comparisons help identify where to investigate planning and shipment mix. They do not establish the causes of delays, guaranteed savings or route profitability.
 
-```
-🚀 INTERMODAL ANALYTICS — PIPELINE STARTING
-============================================================
+## What the pipeline does
 
-📦 PHASE 1: File ETL
-  ✅ Extracted    50,000 records
-  ✅ Transformed  49,477 records  (removed 523 duplicates)
-  ✅ Saved to     data/processed/shipments_processed.parquet
+1. Reads the included CSV, independent of the current working directory.
+2. Validates all 18 required fields, numeric ranges, integer fields, categorical values, unique shipment IDs and status/duration consistency.
+3. Quarantines rejected rows with their source row and failure reasons. The default quality gate permits **zero rejected records**.
+4. Computes duration overruns and fuel-cost ratios, and atomically publishes a Parquet file.
+5. Generates six KPI tables, four PNG charts and a JSON run manifest with input checksum, row counts and elapsed time.
+6. With `--with-database`, upserts dimensions and shipment facts into PostgreSQL and refreshes six materialized views in one transaction.
 
-🗄️  PHASE 2: Database
-  ✅ Schema created
-  ✅ Dimensions loaded (modes, routes, carriers, cargo types)
-  ✅ 49,477 shipments loaded to fact table
-  ✅ 6 materialized views refreshed
+An unchanged repeat database load does not add fact rows or update their load timestamps. Changed shipment records are updated by `shipment_id`; records absent from a later input are retained. This is an upsert workflow, not a full-table replacement.
 
-📊 PHASE 3: KPIs
-  on_time_delivery_rate  →  94.5%
-  avg_cost_per_shipment  →  $8,234
-  avg_transit_days       →  12.3
-  delay_rate             →  5.5%
+## Run without a database
 
-⏱️  Done in 58.2 seconds
-```
-
------
-
-## Project structure
-
-```
-intermodal-data-platform/
-│
-├── src/
-│   ├── etl/
-│   │   ├── extract.py           # reads CSV/Excel, validates it exists and has the right columns
-│   │   ├── transform.py         # deduplication, null handling, date parsing, feature engineering
-│   │   ├── load.py              # saves to Parquet
-│   │   ├── pipeline.py          # runs extract → transform → load in order
-│   │   └── load_to_database.py  # loads to PostgreSQL (dimensions first, then facts)
-│   └── utils/
-│       ├── logger.py            # loguru setup with file rotation
-│       └── config_loader.py     # reads config.yaml so nothing is hardcoded
-│
-├── sql/
-│   ├── schema/
-│   │   ├── 01_create_tables.sql   # star schema DDL
-│   │   └── 02_create_views.sql    # 6 materialized views
-│   └── kpis/
-│       └── business_kpis.sql      # analytical queries
-│
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_data_quality_report.ipynb
-│   └── 03_kpi_dashboard.ipynb
-│
-├── tests/unit/
-├── config/config.yaml
-└── run_full_pipeline.py
-```
-
------
-
-## Getting it running
-
-Prerequisites: Python 3.11, PostgreSQL 14
+From a terminal in a local environment or GitHub Codespaces with Python 3.11 or 3.12:
 
 ```bash
 git clone https://github.com/gusbakers/intermodal-data-platform.git
 cd intermodal-data-platform
-pip install -r requirements.txt
-```
-
-Set up the database:
-
-```bash
-sudo service postgresql start
-
-sudo -u postgres psql << EOF
-CREATE DATABASE intermodal_analytics;
-CREATE USER data_engineer WITH PASSWORD 'DataEng2024!';
-GRANT ALL PRIVILEGES ON DATABASE intermodal_analytics TO data_engineer;
-\c intermodal_analytics
-GRANT ALL ON SCHEMA public TO data_engineer;
-EOF
-```
-
-Add your data file to `data/raw/` and update the path in `config/config.yaml`, then:
-
-```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 python run_full_pipeline.py
 ```
 
-That’s it. The schema gets created automatically on first run.
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`.
 
------
+This generates `data/processed/shipments_processed.parquet`, a quarantine CSV under `data/rejected/`, and the analytical files under `outputs/`. `outputs/run_summary.json` records the actual run duration and explicitly says whether the database phase was loaded or skipped. Runtime files and local credentials are ignored by Git.
 
-## The database design
+## Run with PostgreSQL
 
-Star schema — one fact table with shipment transactions, four dimension tables with descriptive attributes (transport modes, routes, carriers, cargo types), and a date dimension for time-based analysis.
-
-```
-dim_transport_modes     dim_carriers
-        |                    |
-        +──→ fact_shipments ←─+
-                  |
-           dim_routes    dim_cargo_types
-                  |
-              dim_date
-```
-
-I chose star schema over a flat denormalized table because the queries here are analytical. When you’re aggregating 50K rows by carrier and month, you want pre-joined structures with proper indexes — not scanning a wide table with repeated strings.
-
-The 6 materialized views pre-calculate the most common aggregations:
-
-|View                  |What it’s for                                     |
-|----------------------|--------------------------------------------------|
-|`mv_kpi_dashboard`    |top-level overview metrics                        |
-|`mv_mode_performance` |maritime vs air vs rail vs road breakdown         |
-|`mv_route_performance`|volume and delay rates by route                   |
-|`mv_carrier_scorecard`|ranked carriers with composite score              |
-|`mv_monthly_trends`   |MoM and YoY growth using window functions         |
-|`mv_cost_optimization`|shipments running significantly above mode average|
-
-They refresh automatically at the end of each pipeline run.
-
------
-
-## Some decisions I made and why
-
-**Parquet for the processed layer, not CSV**
-
-After the ETL runs, I save to Parquet instead of writing a new CSV. It compresses to about 30% of the original size and loads much faster for downstream reads because it’s columnar — if a query only needs three columns out of twenty, it doesn’t read the rest. CSV doesn’t do that.
-
-**Loguru instead of print statements**
-
-I started with print() everywhere. Got annoying fast — no timestamps, no log levels, nothing persisted after the terminal closed. Loguru was a clean upgrade: structured output, automatic file rotation, easy to set to DEBUG when I’m troubleshooting.
-
-**Config in YAML**
-
-Database host, passwords, file paths — none of that is hardcoded in the source files. It lives in `config/config.yaml`. Means I can run this locally against localhost and in a different environment against a real server without touching Python code.
-
-**Batch inserts to PostgreSQL**
-
-First version was doing one INSERT per row. With 50K rows that was painfully slow. Switched to `psycopg2.extras.execute_values` which batches 1,000 rows per trip to the database. Much better.
-
------
-
-## Things that didn’t go well the first time
-
-The date parsing broke on me twice. Different carriers in the sample data used different formats — some used `2024-01-15`, others `15/01/2024`, a few had timestamps with timezone offsets. I eventually had to write a proper multi-format parser with fallbacks instead of just calling `pd.to_datetime()` and hoping.
-
-The first version of the dimension loading also had a bug where I was inserting routes before checking if the carrier existed, which caused FK constraint violations that were annoying to debug. Fixed it by explicitly ordering: modes → carriers → routes → facts.
-
------
-
-## Tests
+Docker with Compose provides a local PostgreSQL 16 database; no cloud account is required. After installing the Python dependencies:
 
 ```bash
-pytest tests/ -v --cov=src --cov-report=term-missing
+cp .env.example .env
 ```
 
------
+Open `.env` and set `DB_PASSWORD` to a local password of your choice. Keep this file out of Git. Then run:
 
-## What I want to add next
+```bash
+docker compose up -d --wait
+python run_full_pipeline.py --with-database
+python run_full_pipeline.py --with-database
+```
 
-Airflow for scheduling — right now you have to run it manually which is fine for a portfolio project but wouldn’t scale. dbt for the SQL transformation layer would also be cleaner than raw SQL files. And honestly a Streamlit dashboard would make the KPIs accessible to people who don’t want to open Jupyter.
+For an unchanged dataset and an initially empty database, the second manifest should report `stored_shipments: 20000` and `changed_records: 0`. The schema is created automatically in the `logistics` namespace.
 
------
+Query an analytical view:
+
+```bash
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT * FROM logistics.mv_kpi_dashboard;"'
+```
+
+Stop PostgreSQL when finished; this preserves its local data volume:
+
+```bash
+docker compose down
+```
+
+The six materialized views cover the overall dashboard, modes, routes, cargo types, priorities and fuel efficiency. [business_kpis.sql](sql/kpis/business_kpis.sql) contains ready-to-run analytical queries. [ARCHITECTURE.md](docs/ARCHITECTURE.md) explains transaction boundaries and the shipment grain.
+
+## Quality and testing
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m ruff check .
+python -m ruff format --check .
+python scripts/verify_project.py
+python -m pytest -m 'not integration' --cov=src --cov-report=term-missing
+python scripts/execute_notebooks.py
+```
+
+Tests exercise missing files and columns, invalid values, conflicting IDs, status consistency, Parquet round trips, quality-gate failures and weighted KPI calculations. The quality report lists checked and failed records for each rule; it does not invent an overall quality score.
+
+PostgreSQL integration tests additionally check repeat loads, changed records, agreement between all six SQL views and Python KPIs, and transaction rollback. They run in GitHub Actions against a disposable PostgreSQL 16 service. To run them yourself, set `TEST_DATABASE_URL` to a **dedicated disposable database** before `python -m pytest -m integration`; these tests reset its `logistics` schema.
+
+The workflow tests Python 3.11 and 3.12, regenerates the outputs and executes all three notebooks. The notebooks include saved outputs and short explanations:
+
+- [Data exploration](notebooks/01_data_exploration.ipynb)
+- [Data quality report](notebooks/02_data_quality_report.ipynb)
+- [Executive KPI dashboard](notebooks/03_kpi_dashboard.ipynb)
+
+## Repository structure
+
+| Location | Purpose |
+|---|---|
+| `src/etl/` | Extraction, validation, transformation, Parquet and PostgreSQL loads |
+| `src/analytics.py` | Shared metric definitions and six Python KPI tables |
+| `src/visualization.py` | Four charts generated from validated records |
+| `sql/schema/` | Four dimensions, shipment fact table and analytical views |
+| `tests/` | Behavioral and PostgreSQL integration checks |
+| `notebooks/` | Executed analysis, quality and executive reporting |
+| `outputs/` | Versioned metrics, quality results, KPI tables and charts |
+| `config/`, `.env.example` | Portable paths and documented environment settings |
+
+## Data scope
+
+The CSV was already present in this repository. Its original upstream provider, collection dates and generation process are not documented; the analysis makes no claim that it represents a production transport network.
+
+It contains shipment-level durations and a dominant transport mode, but no shipment dates, carrier identities, revenue or leg-level sequence. Monthly trends, carrier scorecards, complete intermodal movement reconstruction and profitability calculations require additional source fields. The schema and dashboard intentionally reflect the available data.
+
+Future extensions include scheduled orchestration and additional source events. A delay-prediction model would first need a feature-availability review to prevent post-arrival measurements from leaking the outcome.
 
 ## Connect
 
-Master's in Data Science 
-Data Engineer · ML Engineer · AI Engineer
-
-If you have feedback on the approach or just want to talk about data engineering, feel free to reach out.
-
-📧 gaft-2727@outlook.com
+Gustavo · Master's in Data Science  
+Data Engineering · Machine Learning · AI Systems  
+[GitHub profile](https://github.com/gusbakers)

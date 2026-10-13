@@ -1,0 +1,2 @@
+total_shipments,on_time_shipments,delayed_shipments,on_time_pct,avg_planned_duration_hours,avg_actual_duration_hours,avg_delay_hours_delayed,total_fuel_cost_usd,avg_fuel_cost_usd,fuel_cost_per_km,fuel_cost_per_ton_km
+20000,10000,10000,50.00000000,72.04465000,79.56340000,17.01070000,130377696.55000001,6518.88482750,1.70506629,0.07620336

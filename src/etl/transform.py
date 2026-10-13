@@ -1,38 +1,17 @@
-"""Data Transformation Module"""
+"""Shipment-level analytical features with explicit hours, tonnes, kilometres and USD."""
+
 import pandas as pd
-import numpy as np
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent))
-from utils.logger import log
-from utils.config_loader import config
+
+from src.utils.logger import log
+
 
 class DataTransformer:
-    def __init__(self):
-        self.validation_enabled = config.get('etl.validation_enabled', True)
-    
-    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
-        log.info("🔧 Starting transformation")
-        df_clean = df.copy()
-        
-        initial = len(df_clean)
-        df_clean = df_clean.drop_duplicates()
-        log.info(f"Removed {initial - len(df_clean)} duplicates")
-        
-        date_cols = config.get('validation.date_columns', [])
-        for col in date_cols:
-            if col in df_clean.columns:
-                df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
-        
-        df_clean['processed_at'] = pd.Timestamp.now()
-        
-        log.info(f"✅ Transformation complete: {len(df_clean):,} records")
-        return df_clean
-
-if __name__ == "__main__":
-    from extract import DataExtractor
-    extractor = DataExtractor()
-    df = extractor.extract()
-    transformer = DataTransformer()
-    df_clean = transformer.transform(df)
-    print(df_clean.info())
+    def transform(self, frame: pd.DataFrame) -> pd.DataFrame:
+        data = frame.copy()
+        data["is_on_time"] = data.actual_duration_hours.le(data.planned_duration_hours)
+        data["delay_hours"] = (data.actual_duration_hours - data.planned_duration_hours).clip(lower=0)
+        data["fuel_cost_per_km"] = data.total_fuel_cost_usd / data.total_distance_km
+        data["fuel_cost_per_ton_km"] = data.total_fuel_cost_usd / (data.weight_tons * data.total_distance_km)
+        data["processed_at"] = pd.Timestamp.now(tz="UTC")
+        log.info("Derived features for %s validated shipments", len(data))
+        return data

@@ -1,34 +1,26 @@
-"""Data Loading Module"""
-import pandas as pd
+"""Atomic publication of the processed Parquet layer."""
+
 from pathlib import Path
-import sys
-sys.path.append(str(Path(__file__).parent.parent))
-from utils.logger import log
-from utils.config_loader import config
+from tempfile import NamedTemporaryFile
+
+import pandas as pd
+
+from src.utils.config_loader import ConfigLoader
+
 
 class DataLoader:
-    def __init__(self):
-        self.processed_dir = Path(config.get('data.processed_dir'))
-        self.processed_dir.mkdir(parents=True, exist_ok=True)
-    
-    def load(self, df: pd.DataFrame, filename: str = 'processed_data') -> Path:
-        log.info(f"💾 Loading data to Parquet")
-        output_file = self.processed_dir / f"{filename}.parquet"
-        
-        df.to_parquet(output_file, index=False, compression='snappy')
-        size_mb = output_file.stat().st_size / (1024 ** 2)
-        
-        log.info(f"✅ Saved {len(df):,} records ({size_mb:.2f} MB)")
-        return output_file
+    def __init__(self, config: ConfigLoader | None = None):
+        self.config = config or ConfigLoader()
+        self.processed_dir = self.config.path("data.processed_dir")
 
-if __name__ == "__main__":
-    from extract import DataExtractor
-    from transform import DataTransformer
-    
-    extractor = DataExtractor()
-    transformer = DataTransformer()
-    loader = DataLoader()
-    
-    df = extractor.extract()
-    df_clean = transformer.transform(df)
-    loader.load(df_clean)
+    def load(self, frame: pd.DataFrame, filename: str = "shipments_processed") -> Path:
+        self.processed_dir.mkdir(parents=True, exist_ok=True)
+        destination = self.processed_dir / f"{filename}.parquet"
+        with NamedTemporaryFile(dir=self.processed_dir, suffix=".parquet", delete=False) as handle:
+            temporary = Path(handle.name)
+        try:
+            frame.to_parquet(temporary, index=False, compression="snappy")
+            temporary.replace(destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+        return destination
