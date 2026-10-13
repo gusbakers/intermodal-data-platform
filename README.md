@@ -1,6 +1,6 @@
 # Intermodal Logistics Analytics
 
-Shipment analytics for understanding delivery reliability, transport duration and fuel efficiency across routes and transport modes. The platform turns the included CSV into validated shipment records, reproducible KPI tables and a PostgreSQL analytical model, with four charts that make the results accessible to an operations audience.
+I became interested in logistics because it connects data with practical decisions about routes, delivery times and transport costs. I wanted to explore how shipment data could help identify delivery delays and compare fuel efficiency across different routes and transport modes. This project follows that idea from data validation to analysis, using Python and PostgreSQL to produce clear metrics and visualizations that make the results easy to understand.
 
 ![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-247bd1?logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)
